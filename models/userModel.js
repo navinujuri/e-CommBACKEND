@@ -54,14 +54,25 @@ var userSchema = new mongoose.Schema(
   }
 );
 
+
+
+// this  is a middleware executes before save(other methods are like 'remove' etc) an user into db ie here we are encrytpting password
 userSchema.pre("save", async function (next) {
+
+//this is for when user updates his details it checks whether the user password is updated or not. if the password is the same then if() is executed
   if (!this.isModified("password")) {
     next();
   }
+
+  //this gets executed when a new user is created or existing user password is changed
   const salt = await bcrypt.genSaltSync(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
+
+
+
+//creating methods on the user model. These methods can be avaiable on the userCtrl
 userSchema.methods.isPasswordMatched = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
