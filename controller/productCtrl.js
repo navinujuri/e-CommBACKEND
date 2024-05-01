@@ -55,27 +55,66 @@ const getaProduct = asyncHandler(async (req, res) => {
 });
 
 const getAllProduct = asyncHandler(async (req, res) => {
+
+  // curl 'http://localhost:5000/api/products?category=electronics&price[gte]=100&price[lte]=500&rating[gte]=4&sort=price,-rating&fields=name,price,description&page=2&limit=10'
+
   try {
     // Filtering
     const queryObj = { ...req.query };
+    // {
+    //   category: 'electronics',
+    //   price: { $gte: 100, $lte: 500 },
+    //   rating: { $gte: 4 },
+    //   sort: 'price,-rating',
+    //   fields: 'name,price,description',
+    //   page: 2,
+    //   limit: 10
+    // }
+    
     const excludeFields = ["page", "sort", "limit", "fields"];
     excludeFields.forEach((el) => delete queryObj[el]);
+    // queryObj
+    // {
+    //   category: 'electronics',
+    //   price: { $gte: 100, $lte: 500 }
+    // }
+    
+
+    
     let queryStr = JSON.stringify(queryObj);
+    // queryStr = '{"category":"electronics","price":{"gte":100,"lte":500},"rating":{"gte":4}}';
+
     queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
+    // '{"category":"electronics","price":{"$gte":100,"$lte":500},"rating":{"$gte":4}}'
 
     let query = Product.find(JSON.parse(queryStr));
+    // [
+    //   {
+    //     title: "Laptop",
+    //     category: "electronics",
+    //     price: 800,
+    //     rating: 4.5,
+    //     createdAt: "2024-04-30T00:00:00.000Z"
+    //   },
+    //   {
+    //     title: "Smartphone",
+    //     category: "electronics",
+    //     price: 500,
+    //     rating: 4.2,
+    //     createdAt: "2024-04-28T00:00:00.000Z"
+    //   }
+    // ]
+    
 
     // Sorting
-
-    if (req.query.sort) {
-      const sortBy = req.query.sort.split(",").join(" ");
-      query = query.sort(sortBy);
-    } else {
-      query = query.sort("-createdAt");
-    }
+      if (req.query.sort) {
+        const sortBy = req.query.sort.split(",").join(" ");
+        query = query.sort(sortBy);
+      } else {
+        query = query.sort("-createdAt");
+      }
 
     // limiting the fields
-
     if (req.query.fields) {
       const fields = req.query.fields.split(",").join(" ");
       query = query.select(fields);
@@ -84,21 +123,25 @@ const getAllProduct = asyncHandler(async (req, res) => {
     }
 
     // pagination
-
     const page = req.query.page;
     const limit = req.query.limit;
     const skip = (page - 1) * limit;
+
     query = query.skip(skip).limit(limit);
+    
     if (req.query.page) {
       const productCount = await Product.countDocuments();
       if (skip >= productCount) throw new Error("This Page does not exists");
     }
+
     const product = await query;
     res.json(product);
+
   } catch (error) {
     throw new Error(error);
   }
 });
+
 const addToWishlist = asyncHandler(async (req, res) => {
   const { _id } = req.user;
   const { prodId } = req.body;
